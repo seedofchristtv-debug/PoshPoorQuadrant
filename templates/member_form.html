@@ -24,12 +24,45 @@
     </section>
     <section class="panel form-card">
       <div class="form-section-heading"><span class="step-number">03</span><div><h2>Member photo</h2><p>Help your team recognize and welcome each person.</p></div></div>
-      <label class="upload-box">
-        {% if member and member.photo_filename %}<img class="upload-preview" src="{{ url_for('uploaded_file', filename=member.photo_filename) }}" alt="Current member photo">{% else %}<span class="upload-placeholder">♧</span>{% endif %}
-        <span><strong>{{ 'Replace photo' if member and member.photo_filename else 'Upload a photo' }}</strong><small>JPG, PNG, GIF or WEBP · max 5 MB</small></span>
-        <input type="file" name="photo" accept="image/png,image/jpeg,image/gif,image/webp">
+      <label class="upload-box camera-upload" for="photo-input">
+        {% if member and member.photo_filename %}<img id="photo-preview" class="upload-preview" src="{{ url_for('uploaded_file', filename=member.photo_filename) }}" alt="Current member photo">{% else %}<span id="photo-preview" class="upload-placeholder">♧</span>{% endif %}
+        <span class="upload-copy"><strong id="photo-title">{{ 'Replace photo' if member and member.photo_filename else 'Take a photo or upload one' }}</strong><small id="photo-hint">On a phone, this opens the camera · JPG, PNG, GIF or WEBP · max 5 MB</small></span>
+        <span class="camera-badge">⌾</span>
+        <input id="photo-input" type="file" name="photo" accept="image/*" capture="environment">
       </label>
     </section>
     <div class="form-actions"><a class="button button-ghost" href="{{ url_for('member_detail', member_id=member.id) if member else url_for('members') }}">Cancel</a><button class="button button-primary" type="submit">{{ 'Save changes' if member else 'Add member' }} <span>→</span></button></div>
   </form>
+  <script>
+    (function () {
+      var input = document.getElementById("photo-input");
+      var preview = document.getElementById("photo-preview");
+      var title = document.getElementById("photo-title");
+      var hint = document.getElementById("photo-hint");
+      if (!input || !preview) return;
+      input.addEventListener("change", function () {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        if (!file.type || file.type.indexOf("image/") !== 0) {
+          title.textContent = "Choose an image file";
+          hint.textContent = "Please select a JPG, PNG, GIF, or WEBP image.";
+          return;
+        }
+        var objectUrl = URL.createObjectURL(file);
+        if (preview.tagName.toLowerCase() === "img") {
+          preview.src = objectUrl;
+        } else {
+          var image = document.createElement("img");
+          image.id = "photo-preview";
+          image.className = "upload-preview";
+          image.alt = "New member photo preview";
+          image.src = objectUrl;
+          preview.replaceWith(image);
+          preview = image;
+        }
+        title.textContent = "Photo ready to save";
+        hint.textContent = file.name + " · " + Math.max(1, Math.round(file.size / 1024)) + " KB";
+      });
+    })();
+  </script>
 {% endblock %}
