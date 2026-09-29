@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#153e35">
+    <title>{% block title %}See of Christ Ministry{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a href="{{ url_for('dashboard') }}" class="brand">
+          <span class="brand-mark">SC</span>
+          <span>
+            <strong>See of Christ</strong>
+            <small>Ministry</small>
+          </span>
+        </a>
+        <div class="nav-label">Workspace</div>
+        <nav class="main-nav">
+          <a class="{{ 'active' if active_page == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}">
+            <span class="nav-icon">⌂</span> Overview
+          </a>
+          <a class="{{ 'active' if active_page == 'members' else '' }}" href="{{ url_for('members') }}">
+            <span class="nav-icon">♧</span> Members
+          </a>
+          <a class="{{ 'active' if active_page == 'attendance' else '' }}" href="{{ url_for('attendance') }}">
+            <span class="nav-icon">✓</span> Attendance
+          </a>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="support-card">
+            <span class="support-spark">✦</span>
+            <strong>Serve with purpose</strong>
+            <p>Keep your church family connected and cared for.</p>
+          </div>
+          <div class="user-mini">
+            <span class="avatar avatar-small avatar-gold">SC</span>
+            <span><strong>Church admin</strong><small>Ministry team</small></span>
+            <span class="more">•••</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="mobile-brand">
+            <span class="brand-mark">SC</span>
+            <strong>See of Christ</strong>
+          </div>
+          <div class="topbar-spacer"></div>
+          <div class="topbar-date"><span class="topbar-dot"></span> {{ today_label if today_label else 'Ministry workspace' }}</div>
+          <div class="topbar-divider"></div>
+          <div class="profile-chip"><span class="avatar avatar-small">SC</span><span class="profile-name">Admin</span><span class="chevron">⌄</span></div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-stack">
+              {% for category, message in messages %}
+                <div class="flash {{ category }}"><span>{{ '✓' if category == 'success' else '!' }}</span>{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="page-wrap">
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+    </div>
+    <script>
+      document.querySelectorAll("[data-dismiss]").forEach(function (el) {
+        el.addEventListener("click", function () { el.remove(); });
+      });
+      window.setTimeout(function () {
+        document.querySelectorAll(".flash").forEach(function (el) { el.classList.add("fade-out"); });
+      }, 5000);
+    </script>
+  </body>
+</html>

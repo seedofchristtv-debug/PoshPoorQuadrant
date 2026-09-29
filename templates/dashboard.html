@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Overview · See of Christ Ministry{% endblock %}
+{% block content %}
+  <div class="page-heading heading-with-action">
+    <div>
+      <div class="eyebrow">MONDAY, {{ today|upper }}</div>
+      <h1>Good morning, church family.</h1>
+      <p class="subtitle">Here’s what’s happening with your ministry today.</p>
+    </div>
+    <a class="button button-primary" href="{{ url_for('add_member') }}"><span>＋</span> Add member</a>
+  </div>
+
+  <section class="stats-grid">
+    <div class="stat-card stat-featured">
+      <div class="stat-icon icon-people">♧</div>
+      <div class="stat-copy"><span>Total members</span><strong>{{ member_count }}</strong><small>People in your church family</small></div>
+      <div class="stat-trend">● Active</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-present">✓</div>
+      <div class="stat-copy"><span>Present today</span><strong>{{ present_today }}</strong><small>Marked for {{ today }}</small></div>
+      <div class="stat-trend trend-green">↗ Today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon icon-groups">◈</div>
+      <div class="stat-copy"><span>Ministry groups</span><strong>{{ groups_count }}</strong><small>Teams and communities</small></div>
+      <div class="stat-trend trend-purple">Organized</div>
+    </div>
+  </section>
+
+  <section class="dashboard-grid">
+    <div class="panel attendance-panel">
+      <div class="panel-heading">
+        <div><h2>Attendance snapshot</h2><p>Recent attendance activity</p></div>
+        <a class="text-link" href="{{ url_for('attendance') }}">View all <span>→</span></a>
+      </div>
+      {% if recent_attendance %}
+        <div class="activity-list">
+          {% for row in recent_attendance %}
+            <div class="activity-row">
+              <span class="avatar {{ 'avatar-lavender' if loop.index % 3 == 0 else 'avatar-blue' if loop.index % 2 == 0 else 'avatar-peach' }}">{{ row.first_name[:1] }}{{ row.last_name[:1] }}</span>
+              <div class="activity-name"><strong>{{ row.first_name }} {{ row.last_name }}</strong><small>{{ row.attendance_date }}</small></div>
+              <span class="status-pill status-{{ row.status }}">{{ row.status|capitalize }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state compact"><div class="empty-icon">✓</div><strong>No attendance recorded yet</strong><p>Use attendance to record your first service.</p><a href="{{ url_for('attendance') }}" class="text-link">Take attendance →</a></div>
+      {% endif %}
+    </div>
+
+    <div class="panel quick-panel">
+      <div class="panel-heading"><div><h2>Quick actions</h2><p>Common ministry tasks</p></div></div>
+      <a class="quick-action" href="{{ url_for('add_member') }}"><span class="quick-icon green">＋</span><span><strong>Add a member</strong><small>Create a new member profile</small></span><span class="arrow">→</span></a>
+      <a class="quick-action" href="{{ url_for('attendance') }}"><span class="quick-icon yellow">✓</span><span><strong>Take attendance</strong><small>Record today’s presence</small></span><span class="arrow">→</span></a>
+      <a class="quick-action" href="{{ url_for('members') }}"><span class="quick-icon purple">♧</span><span><strong>Browse members</strong><small>Find someone in your church</small></span><span class="arrow">→</span></a>
+    </div>
+  </section>
+
+  <section class="panel members-preview">
+    <div class="panel-heading">
+      <div><h2>Recently added members</h2><p>Welcome people into the family</p></div>
+      <a class="text-link" href="{{ url_for('members') }}">See all members <span>→</span></a>
+    </div>
+    {% if recent_members %}
+      <div class="member-table-wrap">
+        <table class="member-table">
+          <thead><tr><th>Member</th><th>Ministry group</th><th>Joined</th><th>Contact</th><th></th></tr></thead>
+          <tbody>
+            {% for member in recent_members %}
+              <tr>
+                <td><a href="{{ url_for('member_detail', member_id=member.id) }}" class="member-cell"><span class="avatar {{ 'avatar-blue' if loop.index % 2 == 0 else 'avatar-peach' }}">{% if member.photo_filename %}<img src="{{ url_for('uploaded_file', filename=member.photo_filename) }}" alt="">{% else %}{{ initials(member) }}{% endif %}</span><span><strong>{{ member.first_name }} {{ member.last_name }}</strong><small>{{ member.email or 'No email added' }}</small></span></a></td>
+                <td><span class="group-label">{{ member.group_name or 'General member' }}</span></td>
+                <td>{{ member.join_date or '—' }}</td>
+                <td>{{ member.phone or '—' }}</td>
+                <td><a href="{{ url_for('member_detail', member_id=member.id) }}" class="row-arrow">→</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state"><div class="empty-icon">♧</div><strong>Your member directory is ready</strong><p>Add your first member to start building the church family.</p><a href="{{ url_for('add_member') }}" class="button button-soft">Add first member</a></div>
+    {% endif %}
+  </section>
+{% endblock %}

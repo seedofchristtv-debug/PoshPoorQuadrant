@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Members · See of Christ Ministry{% endblock %}
+{% block content %}
+  <div class="page-heading heading-with-action">
+    <div><div class="eyebrow">DIRECTORY</div><h1>Members</h1><p class="subtitle">Care for every person in your church family.</p></div>
+    <a class="button button-primary" href="{{ url_for('add_member') }}"><span>＋</span> Add member</a>
+  </div>
+  <div class="toolbar panel">
+    <form class="search-form" method="get">
+      <span class="search-icon">⌕</span><input type="search" name="q" value="{{ query }}" placeholder="Search by name, phone, or email...">
+      <select name="group" aria-label="Filter by ministry group"><option value="">All groups</option>{% for item in groups %}<option value="{{ item.group_name }}" {{ 'selected' if selected_group == item.group_name else '' }}>{{ item.group_name }}</option>{% endfor %}</select>
+      <button class="button button-outline" type="submit">Filter</button>
+    </form>
+    <span class="result-count">{{ members|length }} member{{ '' if members|length == 1 else 's' }}</span>
+  </div>
+  <section class="panel members-list-panel">
+    {% if members %}
+      <div class="member-table-wrap">
+        <table class="member-table full-table">
+          <thead><tr><th>Member</th><th>Ministry group</th><th>Phone</th><th>Email</th><th>Joined</th><th></th></tr></thead>
+          <tbody>
+            {% for member in members %}
+              <tr>
+                <td><a href="{{ url_for('member_detail', member_id=member.id) }}" class="member-cell"><span class="avatar avatar-blue">{% if member.photo_filename %}<img src="{{ url_for('uploaded_file', filename=member.photo_filename) }}" alt="">{% else %}{{ initials(member) }}{% endif %}</span><span><strong>{{ member.first_name }} {{ member.last_name }}</strong><small>{{ member.address or 'Member profile' }}</small></span></a></td>
+                <td><span class="group-label">{{ member.group_name or 'General member' }}</span></td><td>{{ member.phone or '—' }}</td><td>{{ member.email or '—' }}</td><td>{{ member.join_date or '—' }}</td><td><a href="{{ url_for('member_detail', member_id=member.id) }}" class="row-arrow">→</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state"><div class="empty-icon">⌕</div><strong>No members found</strong><p>Try a different search or add a new member.</p><a href="{{ url_for('add_member') }}" class="button button-soft">Add member</a></div>
+    {% endif %}
+  </section>
+{% endblock %}

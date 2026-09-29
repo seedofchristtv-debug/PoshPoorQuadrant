@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Attendance · See of Christ Ministry{% endblock %}
+{% block content %}
+  <div class="page-heading heading-with-action"><div><div class="eyebrow">CHURCH LIFE</div><h1>Attendance</h1><p class="subtitle">Record presence, care, and connection one service at a time.</p></div><a class="button button-outline" href="{{ url_for('members') }}">View member directory</a></div>
+  <form method="post">
+    <section class="attendance-toolbar panel"><div class="date-picker"><label for="attendance_date">Service date</label><input id="attendance_date" type="date" name="attendance_date" value="{{ attendance_date }}"><button class="button button-soft" type="submit">Load date</button></div><div class="attendance-counts"><span><b class="dot dot-present"></b>{{ counts.present }} present</span><span><b class="dot dot-absent"></b>{{ counts.absent }} absent</span><span><b class="dot dot-excused"></b>{{ counts.excused }} excused</span></div></section>
+    <section class="panel attendance-card">
+      <div class="panel-heading"><div><h2>Mark attendance</h2><p>Choose a status for every member, then save the service record.</p></div><button class="button button-primary" type="submit">Save attendance <span>→</span></button></div>
+      {% if rows %}
+        <div class="attendance-list">
+          {% for member in rows %}
+            <div class="attendance-row"><div class="member-cell"><span class="avatar avatar-blue">{% if member.photo_filename %}<img src="{{ url_for('uploaded_file', filename=member.photo_filename) }}" alt="">{% else %}{{ initials(member) }}{% endif %}</span><span><strong>{{ member.first_name }} {{ member.last_name }}</strong><small>{{ member.group_name or 'General member' }}</small></span></div><div class="attendance-controls"><div class="status-options">{% for status in ['present', 'absent', 'excused'] %}<label class="status-option status-option-{{ status }}"><input type="radio" name="status_{{ member.id }}" value="{{ status }}" {{ 'checked' if member.attendance_status == status else '' }}><span>{{ status|capitalize }}</span></label>{% endfor %}</div><input class="notes-input" name="notes_{{ member.id }}" value="{{ member.attendance_notes }}" placeholder="Optional note"></div></div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state"><div class="empty-icon">✓</div><strong>Add members before taking attendance</strong><p>Your member directory is currently empty.</p><a href="{{ url_for('add_member') }}" class="button button-soft">Add first member</a></div>
+      {% endif %}
+    </section>
+  </form>
+{% endblock %}
