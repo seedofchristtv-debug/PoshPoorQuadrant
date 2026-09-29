@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Overview · See of Christ Ministry{% endblock %}
+{% block title %}Overview · {{ church_name }}{% endblock %}
 {% block content %}
   <div class="page-heading heading-with-action">
     <div>
-      <div class="eyebrow">MONDAY, {{ today|upper }}</div>
+      <div class="eyebrow">{{ today_label|upper }}</div>
       <h1>Good morning, church family.</h1>
       <p class="subtitle">Here’s what’s happening with your ministry today.</p>
     </div>
@@ -18,8 +18,8 @@
     </div>
     <div class="stat-card">
       <div class="stat-icon icon-present">✓</div>
-      <div class="stat-copy"><span>Present today</span><strong>{{ present_today }}</strong><small>Marked for {{ today }}</small></div>
-      <div class="stat-trend trend-green">↗ Today</div>
+      <div class="stat-copy"><span>Present last Sunday</span><strong>{{ present_today }}</strong><small>Marked for {{ service_date }}</small></div>
+      <div class="stat-trend trend-green">↗ Sunday</div>
     </div>
     <div class="stat-card">
       <div class="stat-icon icon-groups">◈</div>
@@ -45,14 +45,14 @@
           {% endfor %}
         </div>
       {% else %}
-        <div class="empty-state compact"><div class="empty-icon">✓</div><strong>No attendance recorded yet</strong><p>Use attendance to record your first service.</p><a href="{{ url_for('attendance') }}" class="text-link">Take attendance →</a></div>
+        <div class="empty-state compact"><div class="empty-icon">✓</div><strong>No Sunday attendance recorded yet</strong><p>Use Sunday attendance to record your first service.</p><a href="{{ url_for('attendance') }}" class="text-link">Take attendance →</a></div>
       {% endif %}
     </div>
 
     <div class="panel quick-panel">
       <div class="panel-heading"><div><h2>Quick actions</h2><p>Common ministry tasks</p></div></div>
       <a class="quick-action" href="{{ url_for('add_member') }}"><span class="quick-icon green">＋</span><span><strong>Add a member</strong><small>Create a new member profile</small></span><span class="arrow">→</span></a>
-      <a class="quick-action" href="{{ url_for('attendance') }}"><span class="quick-icon yellow">✓</span><span><strong>Take attendance</strong><small>Record today’s presence</small></span><span class="arrow">→</span></a>
+      <a class="quick-action" href="{{ url_for('attendance') }}"><span class="quick-icon yellow">✓</span><span><strong>Take Sunday attendance</strong><small>Record this Sunday’s presence</small></span><span class="arrow">→</span></a>
       <a class="quick-action" href="{{ url_for('members') }}"><span class="quick-icon purple">♧</span><span><strong>Browse members</strong><small>Find someone in your church</small></span><span class="arrow">→</span></a>
     </div>
   </section>

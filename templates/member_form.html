@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Edit' if member else 'Add' }} member · See of Christ Ministry{% endblock %}
+{% block title %}{{ 'Edit' if member else 'Add' }} member · {{ church_name }}{% endblock %}
 {% block content %}
   <div class="back-link"><a href="{{ url_for('member_detail', member_id=member.id) if member else url_for('members') }}">← Back to {{ 'profile' if member else 'members' }}</a></div>
-  <div class="page-heading"><div><div class="eyebrow">{{ 'MEMBER PROFILE' if member else 'NEW MEMBER' }}</div><h1>{{ 'Edit member details' if member else 'Add a new member' }}</h1><p class="subtitle">{{ 'Keep this person’s information current.' if member else 'Welcome someone new into the See of Christ family.' }}</p></div></div>
+  <div class="page-heading"><div><div class="eyebrow">{{ 'MEMBER PROFILE' if member else 'NEW MEMBER' }}</div><h1>{{ 'Edit member details' if member else 'Add a new member' }}</h1><p class="subtitle">{{ 'Keep this person’s information current.' if member else 'Welcome someone new into the Seed of Christ family.' }}</p></div></div>
   <form class="form-layout" method="post" enctype="multipart/form-data">
     <section class="panel form-card">
       <div class="form-section-heading"><span class="step-number">01</span><div><h2>Personal information</h2><p>Basic details to help your team know each member.</p></div></div>

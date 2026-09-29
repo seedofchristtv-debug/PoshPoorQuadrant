@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#153e35">
-    <title>{% block title %}See of Christ Ministry{% endblock %}</title>
+    <title>{% block title %}{{ church_name }} · {{ headquarters }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   </head>
   <body>
@@ -13,8 +13,9 @@
         <a href="{{ url_for('dashboard') }}" class="brand">
           <span class="brand-mark">SC</span>
           <span>
-            <strong>See of Christ</strong>
-            <small>Ministry</small>
+            <strong>SEED OF CHRIST</strong>
+            <small>MINISTRY</small>
+            <em>{{ headquarters }}</em>
           </span>
         </a>
         <div class="nav-label">Workspace</div>
@@ -47,12 +48,12 @@
         <header class="topbar">
           <div class="mobile-brand">
             <span class="brand-mark">SC</span>
-            <strong>See of Christ</strong>
+            <strong>SEED OF CHRIST</strong>
           </div>
           <div class="topbar-spacer"></div>
           <div class="topbar-date"><span class="topbar-dot"></span> {{ today_label if today_label else 'Ministry workspace' }}</div>
           <div class="topbar-divider"></div>
-          <div class="profile-chip"><span class="avatar avatar-small">SC</span><span class="profile-name">Admin</span><span class="chevron">⌄</span></div>
+          <div class="profile-chip"><span class="avatar avatar-small">SC</span><span class="profile-name">{{ session.get('admin_username', 'Admin') }}</span><form method="post" action="{{ url_for('logout') }}"><button class="logout-button" type="submit">Sign out</button></form></div>
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}

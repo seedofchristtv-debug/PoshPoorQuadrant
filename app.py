@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from flask import (
@@ -12,8 +12,10 @@ from flask import (
     render_template,
     request,
     send_from_directory,
+    session,
     url_for,
 )
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 
@@ -24,8 +26,15 @@ DB_PATH = DATA_DIR / "church.db"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SESSION_SECRET", "see-of-christ-dev-secret")
+app.config["SECRET_KEY"] = os.environ.get("SESSION_SECRET", "change-this-development-secret")
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") == "production"
+
+CHURCH_NAME = "SEED OF CHRIST MINISTRY"
+HEADQUARTERS = "( ATIMATIM HEAD QUATERS )"
+PUBLIC_ENDPOINTS = {"login", "setup", "static", "favicon"}
 
 DATA_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -74,6 +83,13 @@ def init_db():
             UNIQUE(member_id, attendance_date),
             FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS admins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
         """
     )
     db.commit()
@@ -109,22 +125,113 @@ def initials(member):
     return f"{member['first_name'][:1]}{member['last_name'][:1]}".upper()
 
 
+def admin_exists():
+    return get_db().execute("SELECT 1 FROM admins LIMIT 1").fetchone() is not None
+
+
+def most_recent_sunday(reference=None):
+    reference = reference or date.today()
+    return reference - timedelta(days=(reference.weekday() + 1) % 7)
+
+
+def valid_internal_next(path):
+    return path if path and path.startswith("/") and not path.startswith("//") else "/"
+
+
 app.jinja_env.globals["initials"] = initials
 
 
 @app.context_processor
 def inject_today_label():
-    return {"today_label": datetime.now().strftime("%A, %B %d, %Y")}
+    return {
+        "today_label": datetime.now().strftime("%A, %B %d, %Y"),
+        "church_name": CHURCH_NAME,
+        "headquarters": HEADQUARTERS,
+    }
+
+
+@app.before_request
+def protect_admin_pages():
+    if request.endpoint in PUBLIC_ENDPOINTS:
+        return None
+    if not admin_exists():
+        return redirect(url_for("setup"))
+    if "admin_id" not in session:
+        next_path = request.full_path.rstrip("?")
+        return redirect(url_for("login", next=next_path))
+    return None
+
+
+@app.route("/setup", methods=["GET", "POST"])
+def setup():
+    if admin_exists():
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        username = request.form.get("username", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        if len(username) < 3:
+            flash("Choose an admin username with at least 3 characters.", "error")
+        elif len(password) < 8:
+            flash("Choose a password with at least 8 characters.", "error")
+        elif password != confirm_password:
+            flash("The passwords do not match.", "error")
+        else:
+            db = get_db()
+            cursor = db.execute(
+                "INSERT INTO admins (username, password_hash) VALUES (?, ?)",
+                (username, generate_password_hash(password)),
+            )
+            db.commit()
+            session.clear()
+            session.permanent = True
+            session["admin_id"] = cursor.lastrowid
+            session["admin_username"] = username
+            flash("Admin account created. Welcome to your ministry workspace.", "success")
+            return redirect(url_for("dashboard"))
+    return render_template("setup.html", active_page="setup")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if not admin_exists():
+        return redirect(url_for("setup"))
+    if session.get("admin_id"):
+        return redirect(url_for("dashboard"))
+    next_path = valid_internal_next(request.args.get("next", ""))
+    if request.method == "POST":
+        username = request.form.get("username", "").strip().lower()
+        password = request.form.get("password", "")
+        admin = get_db().execute(
+            "SELECT * FROM admins WHERE username = ?", (username,)
+        ).fetchone()
+        if admin is None or not check_password_hash(admin["password_hash"], password):
+            flash("The username or password is not correct.", "error")
+            return render_template("login.html", active_page="login", next_path=next_path)
+        session.clear()
+        session.permanent = True
+        session["admin_id"] = admin["id"]
+        session["admin_username"] = admin["username"]
+        return redirect(valid_internal_next(request.form.get("next", next_path)))
+    return render_template("login.html", active_page="login", next_path=next_path)
+
+
+@app.post("/logout")
+def logout():
+    session.clear()
+    flash("You have been signed out.", "success")
+    return redirect(url_for("login"))
 
 
 @app.route("/")
 def dashboard():
     db = get_db()
     today = date.today().isoformat()
+    service_date = most_recent_sunday()
     member_count = db.execute("SELECT COUNT(*) FROM members").fetchone()[0]
     present_today = db.execute(
         "SELECT COUNT(*) FROM attendance WHERE attendance_date = ? AND status = 'present'",
-        (today,),
+        (service_date.isoformat(),),
     ).fetchone()[0]
     attendance_count = db.execute(
         "SELECT COUNT(*) FROM attendance WHERE status = 'present'"
@@ -148,6 +255,7 @@ def dashboard():
         "dashboard.html",
         active_page="dashboard",
         today=today,
+        service_date=service_date.isoformat(),
         member_count=member_count,
         present_today=present_today,
         attendance_count=attendance_count,
@@ -313,12 +421,21 @@ def delete_member(member_id):
 @app.route("/attendance", methods=["GET", "POST"])
 def attendance():
     db = get_db()
-    selected_date = request.values.get("attendance_date", date.today().isoformat())
+    selected_date = request.values.get(
+        "attendance_date", most_recent_sunday().isoformat()
+    )
+    can_save = True
     try:
-        datetime.strptime(selected_date, "%Y-%m-%d")
+        parsed_date = datetime.strptime(selected_date, "%Y-%m-%d").date()
     except ValueError:
-        selected_date = date.today().isoformat()
-    if request.method == "POST":
+        parsed_date = most_recent_sunday()
+        selected_date = parsed_date.isoformat()
+    if parsed_date.weekday() != 6:
+        flash("Attendance can only be recorded for a Sunday service.", "error")
+        parsed_date = most_recent_sunday()
+        selected_date = parsed_date.isoformat()
+        can_save = False
+    if request.method == "POST" and can_save and "save_attendance" in request.form:
         members = db.execute(
             "SELECT id FROM members ORDER BY first_name COLLATE NOCASE, last_name COLLATE NOCASE"
         ).fetchall()
@@ -337,7 +454,7 @@ def attendance():
                 (member["id"], selected_date, status, notes),
             )
         db.commit()
-        flash(f"Attendance for {selected_date} has been saved.", "success")
+        flash(f"Sunday service attendance for {selected_date} has been saved.", "success")
     rows = db.execute(
         """
         SELECT m.*, COALESCE(a.status, 'absent') AS attendance_status,

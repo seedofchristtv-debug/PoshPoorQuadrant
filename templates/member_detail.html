@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ member.first_name }} {{ member.last_name }} · See of Christ Ministry{% endblock %}
+{% block title %}{{ member.first_name }} {{ member.last_name }} · {{ church_name }}{% endblock %}
 {% block content %}
   <div class="back-link"><a href="{{ url_for('members') }}">← Back to members</a></div>
   <div class="profile-hero panel">

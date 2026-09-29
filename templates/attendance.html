@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Attendance · See of Christ Ministry{% endblock %}
+{% block title %}Sunday attendance · {{ church_name }}{% endblock %}
 {% block content %}
-  <div class="page-heading heading-with-action"><div><div class="eyebrow">CHURCH LIFE</div><h1>Attendance</h1><p class="subtitle">Record presence, care, and connection one service at a time.</p></div><a class="button button-outline" href="{{ url_for('members') }}">View member directory</a></div>
+  <div class="page-heading heading-with-action"><div><div class="eyebrow">SUNDAY SERVICE</div><h1>Attendance</h1><p class="subtitle">Record presence, care, and connection for every Sunday service.</p></div><a class="button button-outline" href="{{ url_for('members') }}">View member directory</a></div>
   <form method="post">
-    <section class="attendance-toolbar panel"><div class="date-picker"><label for="attendance_date">Service date</label><input id="attendance_date" type="date" name="attendance_date" value="{{ attendance_date }}"><button class="button button-soft" type="submit">Load date</button></div><div class="attendance-counts"><span><b class="dot dot-present"></b>{{ counts.present }} present</span><span><b class="dot dot-absent"></b>{{ counts.absent }} absent</span><span><b class="dot dot-excused"></b>{{ counts.excused }} excused</span></div></section>
+    <section class="attendance-toolbar panel"><div class="date-picker"><label for="attendance_date">Sunday service date</label><input id="attendance_date" type="date" name="attendance_date" value="{{ attendance_date }}"><button class="button button-soft" name="load_date" value="1" type="submit">Load Sunday</button></div><div class="attendance-counts"><span><b class="dot dot-present"></b>{{ counts.present }} present</span><span><b class="dot dot-absent"></b>{{ counts.absent }} absent</span><span><b class="dot dot-excused"></b>{{ counts.excused }} excused</span></div></section>
     <section class="panel attendance-card">
-      <div class="panel-heading"><div><h2>Mark attendance</h2><p>Choose a status for every member, then save the service record.</p></div><button class="button button-primary" type="submit">Save attendance <span>→</span></button></div>
+      <div class="panel-heading"><div><h2>Mark Sunday attendance</h2><p>Choose a status for every member, then save the Sunday service record.</p></div><button class="button button-primary" name="save_attendance" value="1" type="submit">Save attendance <span>→</span></button></div>
       {% if rows %}
         <div class="attendance-list">
           {% for member in rows %}

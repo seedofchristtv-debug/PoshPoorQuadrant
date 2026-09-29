@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#153e35">
+    <title>Set up admin · {{ church_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <section class="auth-brand-panel">
+        <div class="auth-brand"><span class="brand-mark">SC</span><div><strong>SEED OF CHRIST</strong><small>MINISTRY</small></div></div>
+        <div class="auth-message"><span class="auth-kicker">FIRST-TIME SETUP</span><h1>Create your church admin account.</h1><p>Set up the secure account your church leaders will use to manage members and Sunday services.</p></div>
+        <div class="auth-verse">{{ headquarters }}<small>{{ church_name }}</small></div>
+      </section>
+      <section class="auth-form-panel">
+        <div class="auth-form-wrap">
+          <div class="auth-mobile-mark"><span class="brand-mark">SC</span></div>
+          <div class="eyebrow">SECURE SETUP</div>
+          <h2>Create admin account</h2>
+          <p class="auth-subtitle">This only appears once, before your first sign in.</p>
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <div class="auth-flashes">{% for category, message in messages %}<div class="flash {{ category }}"><span>{{ '✓' if category == 'success' else '!' }}</span>{{ message }}</div>{% endfor %}</div>
+            {% endif %}
+          {% endwith %}
+          <form class="auth-form" method="post">
+            <label><span>Admin username</span><input required autofocus autocomplete="username" minlength="3" name="username" placeholder="e.g. churchadmin"></label>
+            <label><span>Password <small class="field-hint">8+ characters</small></span><input required autocomplete="new-password" minlength="8" type="password" name="password" placeholder="Create a strong password"></label>
+            <label><span>Confirm password</span><input required autocomplete="new-password" minlength="8" type="password" name="confirm_password" placeholder="Repeat your password"></label>
+            <button class="button button-primary auth-submit" type="submit">Create secure account <span>→</span></button>
+          </form>
+          <div class="auth-security"><span>▣</span><span><strong>Passwords are protected</strong><small>Your password is stored as a secure hash, never as plain text.</small></span></div>
+        </div>
+        <p class="auth-footer">{{ headquarters }} · {{ church_name }}</p>
+      </section>
+    </main>
+  </body>
+</html>
