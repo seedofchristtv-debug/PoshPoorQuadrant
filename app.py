@@ -1,3 +1,5 @@
+import base64
+import binascii
 import os
 import sqlite3
 import uuid
@@ -8,6 +10,7 @@ from flask import (
     Flask,
     flash,
     g,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -27,14 +30,21 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SESSION_SECRET", "change-this-development-secret")
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") == "production"
 
 CHURCH_NAME = "SEED OF CHRIST MINISTRY"
 HEADQUARTERS = "( ATIMATIM HEAD QUATERS )"
-PUBLIC_ENDPOINTS = {"login", "setup", "static", "favicon"}
+PUBLIC_ENDPOINTS = {
+    "login",
+    "setup",
+    "static",
+    "favicon",
+    "pwa_manifest",
+    "service_worker",
+}
 
 DATA_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -70,6 +80,7 @@ def init_db():
             join_date TEXT,
             birth_date TEXT,
             photo_filename TEXT,
+            client_id TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -79,6 +90,7 @@ def init_db():
             attendance_date TEXT NOT NULL,
             status TEXT NOT NULL CHECK(status IN ('present', 'absent', 'excused')),
             notes TEXT,
+            sync_id TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(member_id, attendance_date),
             FOREIGN KEY(member_id) REFERENCES members(id) ON DELETE CASCADE
@@ -91,6 +103,24 @@ def init_db():
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         """
+    )
+    member_columns = {
+        row[1] for row in db.execute("PRAGMA table_info(members)").fetchall()
+    }
+    attendance_columns = {
+        row[1] for row in db.execute("PRAGMA table_info(attendance)").fetchall()
+    }
+    if "client_id" not in member_columns:
+        db.execute("ALTER TABLE members ADD COLUMN client_id TEXT")
+    if "sync_id" not in attendance_columns:
+        db.execute("ALTER TABLE attendance ADD COLUMN sync_id TEXT")
+    db.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_members_client_id "
+        "ON members(client_id) WHERE client_id IS NOT NULL"
+    )
+    db.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_sync_id "
+        "ON attendance(sync_id) WHERE sync_id IS NOT NULL"
     )
     db.commit()
     db.close()
@@ -105,9 +135,40 @@ def save_photo(file):
         return None
     if not allowed_file(file.filename):
         raise ValueError("Please upload a JPG, PNG, GIF, or WEBP image.")
+    file.stream.seek(0, os.SEEK_END)
+    if file.stream.tell() > 5 * 1024 * 1024:
+        raise ValueError("Please choose an image under 5 MB.")
+    file.stream.seek(0)
     extension = secure_filename(file.filename).rsplit(".", 1)[-1].lower()
     filename = f"{uuid.uuid4().hex}.{extension}"
     file.save(UPLOAD_DIR / filename)
+    return filename
+
+
+def save_photo_data(data_url):
+    if not data_url:
+        return None
+    if not isinstance(data_url, str) or "," not in data_url:
+        raise ValueError("The offline photo could not be read.")
+    header, encoded = data_url.split(",", 1)
+    mime = header.split(";", 1)[0].replace("data:", "").lower()
+    extension_by_mime = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/gif": "gif",
+        "image/webp": "webp",
+    }
+    extension = extension_by_mime.get(mime)
+    if extension is None:
+        raise ValueError("Offline photos must be JPG, PNG, GIF, or WEBP images.")
+    try:
+        content = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error) as error:
+        raise ValueError("The offline photo could not be decoded.") from error
+    if len(content) > 5 * 1024 * 1024:
+        raise ValueError("Please choose an image under 5 MB.")
+    filename = f"{uuid.uuid4().hex}.{extension}"
+    (UPLOAD_DIR / filename).write_bytes(content)
     return filename
 
 
@@ -147,6 +208,7 @@ def inject_today_label():
         "today_label": datetime.now().strftime("%A, %B %d, %Y"),
         "church_name": CHURCH_NAME,
         "headquarters": HEADQUARTERS,
+        "church_slogan": "Together We Can Build",
     }
 
 
@@ -157,6 +219,8 @@ def protect_admin_pages():
     if not admin_exists():
         return redirect(url_for("setup"))
     if "admin_id" not in session:
+        if request.path.startswith("/api/"):
+            return jsonify({"ok": False, "error": "Sign in required to sync offline records."}), 401
         next_path = request.full_path.rstrip("?")
         return redirect(url_for("login", next=next_path))
     return None
@@ -478,6 +542,166 @@ def attendance():
         rows=rows,
         counts=counts,
     )
+
+
+@app.get("/api/offline/bootstrap")
+def offline_bootstrap():
+    rows = get_db().execute(
+        """
+        SELECT id, client_id, first_name, last_name, group_name, photo_filename
+        FROM members
+        ORDER BY first_name COLLATE NOCASE, last_name COLLATE NOCASE
+        """
+    ).fetchall()
+    return jsonify(
+        {
+            "members": [
+                {
+                    "server_id": row["id"],
+                    "client_id": row["client_id"],
+                    "first_name": row["first_name"],
+                    "last_name": row["last_name"],
+                    "group_name": row["group_name"] or "",
+                    "photo_filename": row["photo_filename"],
+                }
+                for row in rows
+            ],
+            "service_date": most_recent_sunday().isoformat(),
+        }
+    )
+
+
+@app.get("/manifest.webmanifest")
+def pwa_manifest():
+    return send_from_directory(
+        app.static_folder,
+        "site.webmanifest",
+        mimetype="application/manifest+json",
+        max_age=0,
+    )
+
+
+@app.get("/sw.js")
+def service_worker():
+    response = send_from_directory(
+        app.static_folder, "sw.js", mimetype="application/javascript"
+    )
+    response.headers["Service-Worker-Allowed"] = "/"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.post("/api/offline/sync")
+def offline_sync():
+    payload = request.get_json(silent=True) or {}
+    operations = payload.get("operations")
+    if not isinstance(operations, list) or len(operations) > 100:
+        return jsonify({"ok": False, "error": "Invalid offline sync payload."}), 400
+
+    db = get_db()
+    member_map = {}
+    try:
+        db.execute("BEGIN")
+        member_operations = [
+            operation for operation in operations if operation.get("kind") == "member"
+        ]
+        attendance_operations = [
+            operation
+            for operation in operations
+            if operation.get("kind") == "attendance"
+        ]
+
+        for operation in member_operations:
+            client_id = str(operation.get("client_id", "")).strip()
+            data = operation.get("data") or {}
+            first_name = str(data.get("first_name", "")).strip()
+            last_name = str(data.get("last_name", "")).strip()
+            if not client_id or not first_name or not last_name:
+                raise ValueError("An offline member is missing required information.")
+
+            existing = db.execute(
+                "SELECT id, photo_filename FROM members WHERE client_id = ?",
+                (client_id,),
+            ).fetchone()
+            if existing:
+                member_map[client_id] = existing["id"]
+                continue
+
+            photo_filename = save_photo_data(data.get("photo_data"))
+            cursor = db.execute(
+                """
+                INSERT INTO members
+                (first_name, last_name, phone, email, address, group_name,
+                 join_date, birth_date, photo_filename, client_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    first_name,
+                    last_name,
+                    str(data.get("phone", "")).strip(),
+                    str(data.get("email", "")).strip(),
+                    str(data.get("address", "")).strip(),
+                    str(data.get("group_name", "")).strip(),
+                    str(data.get("join_date", "")).strip(),
+                    str(data.get("birth_date", "")).strip(),
+                    photo_filename,
+                    client_id,
+                ),
+            )
+            member_map[client_id] = cursor.lastrowid
+
+        for operation in attendance_operations:
+            sync_id = str(operation.get("sync_id", "")).strip()
+            if not sync_id:
+                raise ValueError("An offline attendance record is missing its sync ID.")
+            already_synced = db.execute(
+                "SELECT id FROM attendance WHERE sync_id = ?", (sync_id,)
+            ).fetchone()
+            if already_synced:
+                continue
+
+            member_id = operation.get("member_id")
+            member_client_id = str(operation.get("member_client_id", "")).strip()
+            if member_client_id:
+                member_id = member_map.get(member_client_id)
+                if member_id is None:
+                    matched_member = db.execute(
+                        "SELECT id FROM members WHERE client_id = ?",
+                        (member_client_id,),
+                    ).fetchone()
+                    member_id = matched_member["id"] if matched_member else None
+            try:
+                member_id = int(member_id)
+            except (TypeError, ValueError):
+                member_id = None
+            if member_id is None:
+                raise ValueError("An offline attendance record references an unknown member.")
+
+            attendance_date = str(operation.get("attendance_date", "")).strip()
+            parsed_date = datetime.strptime(attendance_date, "%Y-%m-%d").date()
+            if parsed_date.weekday() != 6:
+                raise ValueError("Offline attendance can only be recorded for Sundays.")
+            status = operation.get("status", "absent")
+            if status not in {"present", "absent", "excused"}:
+                status = "absent"
+            notes = str(operation.get("notes", "")).strip()
+            db.execute(
+                """
+                INSERT INTO attendance
+                (member_id, attendance_date, status, notes, sync_id)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(member_id, attendance_date) DO UPDATE SET
+                    status=excluded.status, notes=excluded.notes,
+                    sync_id=COALESCE(attendance.sync_id, excluded.sync_id)
+                """,
+                (member_id, attendance_date, status, notes, sync_id),
+            )
+
+        db.commit()
+        return jsonify({"ok": True, "member_map": member_map, "synced": len(operations)})
+    except (ValueError, sqlite3.Error) as error:
+        db.rollback()
+        return jsonify({"ok": False, "error": str(error)}), 400
 
 
 @app.route("/uploads/<path:filename>")

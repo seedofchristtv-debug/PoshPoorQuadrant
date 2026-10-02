@@ -3,7 +3,7 @@
 {% block content %}
   <div class="back-link"><a href="{{ url_for('member_detail', member_id=member.id) if member else url_for('members') }}">← Back to {{ 'profile' if member else 'members' }}</a></div>
   <div class="page-heading"><div><div class="eyebrow">{{ 'MEMBER PROFILE' if member else 'NEW MEMBER' }}</div><h1>{{ 'Edit member details' if member else 'Add a new member' }}</h1><p class="subtitle">{{ 'Keep this person’s information current.' if member else 'Welcome someone new into the Seed of Christ family.' }}</p></div></div>
-  <form class="form-layout" method="post" enctype="multipart/form-data">
+  <form class="form-layout" method="post" enctype="multipart/form-data" data-offline-member-form="{{ 'true' if not member else 'false' }}" data-member-id="{{ member.id if member else '' }}">
     <section class="panel form-card">
       <div class="form-section-heading"><span class="step-number">01</span><div><h2>Personal information</h2><p>Basic details to help your team know each member.</p></div></div>
       <div class="form-grid two-col">
@@ -33,6 +33,7 @@
     </section>
     <div class="form-actions"><a class="button button-ghost" href="{{ url_for('member_detail', member_id=member.id) if member else url_for('members') }}">Cancel</a><button class="button button-primary" type="submit">{{ 'Save changes' if member else 'Add member' }} <span>→</span></button></div>
   </form>
+  <div class="offline-form-note" data-offline-message aria-live="polite"></div>
   <script>
     (function () {
       var input = document.getElementById("photo-input");

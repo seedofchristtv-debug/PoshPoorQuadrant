@@ -2,20 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#153e35">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="{{ url_for('pwa_manifest') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='brand/app-icon-192.png') }}">
     <title>{% block title %}{{ church_name }} · {{ headquarters }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}?v=6">
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar">
         <a href="{{ url_for('dashboard') }}" class="brand">
-          <span class="brand-mark">SC</span>
+          <img class="brand-mark" src="{{ url_for('static', filename='brand/official-ministry-seal-original.jpeg') }}" alt="Seed of Christ Ministry seal">
           <span>
             <strong>SEED OF CHRIST</strong>
             <small>MINISTRY</small>
             <em>{{ headquarters }}</em>
+            <b class="brand-slogan">{{ church_slogan }}</b>
           </span>
         </a>
         <div class="nav-label">Workspace</div>
@@ -47,10 +54,11 @@
       <main class="main-content">
         <header class="topbar">
           <div class="mobile-brand">
-            <span class="brand-mark">SC</span>
-            <strong>SEED OF CHRIST</strong>
+            <img class="brand-mark" src="{{ url_for('static', filename='brand/official-ministry-seal-original.jpeg') }}" alt="">
+            <span><strong>SEED OF CHRIST</strong><small>{{ church_slogan }}</small></span>
           </div>
           <div class="topbar-spacer"></div>
+          <div id="network-status" class="network-status"><span class="network-dot"></span> Online</div>
           <div class="topbar-date"><span class="topbar-dot"></span> {{ today_label if today_label else 'Ministry workspace' }}</div>
           <div class="topbar-divider"></div>
           <div class="profile-chip"><span class="avatar avatar-small">SC</span><span class="profile-name">{{ session.get('admin_username', 'Admin') }}</span><form method="post" action="{{ url_for('logout') }}"><button class="logout-button" type="submit">Sign out</button></form></div>
@@ -79,5 +87,6 @@
         document.querySelectorAll(".flash").forEach(function (el) { el.classList.add("fade-out"); });
       }, 5000);
     </script>
+    <script src="{{ url_for('static', filename='offline-sync.js') }}" defer></script>
   </body>
 </html>

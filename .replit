@@ -1,4 +1,4 @@
-modules = ["python-base-3.13"]
+modules = ["python-base-3.13", "nodejs-24"]
 
 [nix]
 channel = "stable-25_05"
@@ -30,3 +30,12 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[deployment]
+deploymentTarget = "cloudrun"
+
+[deployment.run]
+args = ["sh", "-c", "/nix/store/qzc04a3npl70cyyy6flnnrb2ig3kayxm-python3-3.13.11/bin/python3 $file"]
+
+[deployment.run.env]
+file = "main.py"

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#153e35">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/static/brand/app-icon-192.png">
+    <title>Offline workspace · Seed of Christ Ministry</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/brand.css?v=6">
+    <style>
+      @media (max-width: 680px) {
+        .offline-topbar { height: 64px; padding: 0 17px; }
+        .offline-topbar .network-status { font-size: 9px; }
+        .offline-content { padding: 27px 17px 45px; }
+        .offline-heading { align-items: flex-start; flex-direction: column; margin-bottom: 20px; }
+        .offline-heading h1 { font-size: 26px; }
+        .offline-badge { align-self: flex-start; }
+        .offline-grid { grid-template-columns: 1fr; }
+        .offline-form-grid { grid-template-columns: 1fr; }
+        .offline-attendance-row { align-items: flex-start; flex-direction: column; gap: 9px; }
+        .offline-status-options { width: 100%; }
+        .offline-status-options label { flex: 1; }
+        .offline-status-options span { text-align: center; }
+        .offline-notes { width: 100% !important; }
+        .offline-card .button { width: 100%; }
+      }
+    </style>
+  </head>
+  <body class="offline-page">
+    <header class="offline-topbar">
+      <div class="offline-brand"><img class="brand-mark" src="/static/brand/official-ministry-seal-original.jpeg" alt="Seed of Christ Ministry seal"><span><strong>SEED OF CHRIST</strong><small>MINISTRY</small><em>Together We Can Build</em></span></div>
+      <div id="network-status" class="network-status offline"><span class="network-dot"></span> Offline — saving locally</div>
+    </header>
+    <main class="offline-content">
+      <div class="offline-heading">
+        <div><div class="eyebrow">OFFLINE MODE</div><h1>Keep serving without internet.</h1><p>New records are saved in this browser on this device and will sync to the ministry database when you reconnect.</p></div>
+        <span class="offline-badge">Local save enabled</span>
+      </div>
+      <div class="offline-grid">
+        <section class="offline-card">
+          <div class="offline-card-heading"><span class="step-number">01</span><div><h2>Register a member</h2><p>Save their details and camera photo locally.</p></div></div>
+          <form data-offline-page-member-form class="offline-form">
+            <div class="offline-form-grid">
+              <label><span>First name *</span><input required name="first_name" placeholder="e.g. Grace"></label>
+              <label><span>Last name *</span><input required name="last_name" placeholder="e.g. Mensah"></label>
+              <label><span>Phone number</span><input type="tel" name="phone" placeholder="+233 24 000 0000"></label>
+              <label><span>Email address</span><input type="email" name="email" placeholder="name@example.com"></label>
+              <label><span>Ministry group</span><input name="group_name" placeholder="e.g. Choir"></label>
+              <label class="offline-address"><span>Home address</span><input name="address" placeholder="Street, city, region"></label>
+              <label><span>Join date</span><input type="date" name="join_date"></label>
+              <label><span>Date of birth</span><input type="date" name="birth_date"></label>
+            </div>
+            <label class="offline-photo-picker"><span class="upload-placeholder">⌾</span><span><strong>Take or choose a member photo</strong><small>On a phone, the camera will open.</small></span><input type="file" name="photo" accept="image/*" capture="environment"></label>
+            <button class="button button-primary" type="submit">Save member locally <span>→</span></button>
+          </form>
+          <div class="offline-form-note" data-offline-message aria-live="polite"></div>
+        </section>
+        <section class="offline-card offline-attendance-card">
+          <div class="offline-card-heading"><span class="step-number">02</span><div><h2>Sunday attendance</h2><p>Use the members already stored on this device.</p></div></div>
+          <form data-offline-page-attendance-form class="offline-form">
+            <label class="offline-date"><span>Sunday service date</span><input required type="date" name="attendance_date"></label>
+            <div class="offline-member-list" data-offline-member-list><div class="offline-empty">Loading local members…</div></div>
+            <button class="button button-primary" type="submit">Save attendance locally <span>→</span></button>
+          </form>
+          <div class="offline-form-note" data-offline-message aria-live="polite"></div>
+        </section>
+      </div>
+      <div class="offline-sync-note"><span>↻</span><span><strong>Automatic sync is on</strong><small>Use this same browser and app address on this device. Avoid clearing browser site data until pending records finish syncing.</small></span></div>
+    </main>
+    <script>
+      (function () {
+        var dateField = document.querySelector("[name=attendance_date]");
+        if (!dateField) return;
+        var today = new Date();
+        today.setHours(12, 0, 0, 0);
+        today.setDate(today.getDate() - today.getDay());
+        dateField.value = today.toISOString().slice(0, 10);
+      })();
+    </script>
+    <script src="/static/offline-sync.js"></script>
+  </body>
+</html>

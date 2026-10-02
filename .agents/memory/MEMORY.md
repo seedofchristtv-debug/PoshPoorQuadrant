@@ -1,0 +1,1 @@
+- [Ministry branding](ministry-branding.md) — keep the user's slogan and the intended placement of each supplied ministry image consistent.

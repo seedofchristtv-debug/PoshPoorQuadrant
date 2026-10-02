@@ -1,0 +1,24 @@
+{
+  "name": "Seed of Christ Ministry",
+  "short_name": "Seed Ministry",
+  "description": "Church member records and Sunday attendance for Seed of Christ Ministry.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7faf8",
+  "theme_color": "#153e35",
+  "icons": [
+    {
+      "src": "/static/brand/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/brand/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
