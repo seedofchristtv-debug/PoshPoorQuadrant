@@ -1,6 +1,8 @@
 import base64
 import binascii
+import hmac
 import os
+import secrets
 import sqlite3
 import uuid
 from datetime import date, datetime, timedelta
@@ -8,6 +10,7 @@ from pathlib import Path
 
 from flask import (
     Flask,
+    abort,
     flash,
     g,
     jsonify,
@@ -202,6 +205,24 @@ def valid_internal_next(path):
 app.jinja_env.globals["initials"] = initials
 
 
+def admin_form_token():
+    token = session.get("admin_form_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["admin_form_token"] = token
+    return token
+
+
+def validate_admin_form_token():
+    expected = session.get("admin_form_token", "")
+    submitted = request.form.get("admin_form_token", "")
+    if not expected or not hmac.compare_digest(expected, submitted):
+        abort(400, description="This form expired. Reload the page and try again.")
+
+
+app.jinja_env.globals["admin_form_token"] = admin_form_token
+
+
 @app.context_processor
 def inject_today_label():
     return {
@@ -218,6 +239,11 @@ def protect_admin_pages():
         return None
     if not admin_exists():
         return redirect(url_for("setup"))
+    admin_id = session.get("admin_id")
+    if admin_id and not get_db().execute(
+        "SELECT 1 FROM admins WHERE id = ?", (admin_id,)
+    ).fetchone():
+        session.clear()
     if "admin_id" not in session:
         if request.path.startswith("/api/"):
             return jsonify({"ok": False, "error": "Sign in required to sync offline records."}), 401
@@ -285,6 +311,70 @@ def logout():
     session.clear()
     flash("You have been signed out.", "success")
     return redirect(url_for("login"))
+
+
+@app.route("/admins", methods=["GET", "POST"])
+def admins():
+    db = get_db()
+    if request.method == "POST":
+        validate_admin_form_token()
+        username = request.form.get("username", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        if len(username) < 3 or len(username) > 64:
+            flash("Choose a username between 3 and 64 characters.", "error")
+        elif len(password) < 8 or len(password) > 128:
+            flash("Choose a password between 8 and 128 characters.", "error")
+        elif password != confirm_password:
+            flash("The passwords do not match.", "error")
+        else:
+            try:
+                db.execute(
+                    "INSERT INTO admins (username, password_hash) VALUES (?, ?)",
+                    (username, generate_password_hash(password)),
+                )
+                db.commit()
+                flash(f"Admin account for {username} has been created.", "success")
+            except sqlite3.IntegrityError:
+                db.rollback()
+                flash("That username is already in use.", "error")
+        return redirect(url_for("admins"))
+
+    rows = db.execute(
+        "SELECT id, username, created_at FROM admins ORDER BY username COLLATE NOCASE"
+    ).fetchall()
+    return render_template(
+        "admins.html",
+        active_page="admins",
+        admins=rows,
+        current_admin_id=session["admin_id"],
+    )
+
+
+@app.post("/admins/<int:admin_id>/delete")
+def delete_admin(admin_id):
+    validate_admin_form_token()
+    if admin_id == session.get("admin_id"):
+        flash("You cannot remove the account you are currently using.", "error")
+        return redirect(url_for("admins"))
+
+    db = get_db()
+    target = db.execute(
+        "SELECT id, username FROM admins WHERE id = ?", (admin_id,)
+    ).fetchone()
+    if target is None:
+        flash("That admin account could not be found.", "error")
+        return redirect(url_for("admins"))
+
+    admin_count = db.execute("SELECT COUNT(*) FROM admins").fetchone()[0]
+    if admin_count <= 1:
+        flash("The final admin account cannot be removed.", "error")
+        return redirect(url_for("admins"))
+
+    db.execute("DELETE FROM admins WHERE id = ?", (admin_id,))
+    db.commit()
+    flash(f"Admin account for {target['username']} has been removed.", "success")
+    return redirect(url_for("admins"))
 
 
 @app.route("/")

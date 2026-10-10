@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Admin accounts · {{ church_name }}{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div class="eyebrow">WORKSPACE ACCESS</div>
+    <h1>Admin accounts</h1>
+    <p class="subtitle">Give each trusted ministry leader their own sign-in. Share passwords privately.</p>
+  </div>
+
+  <div class="admin-management-grid">
+    <section class="panel admin-account-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Current administrators</h2>
+          <p>{{ admins|length }} account{{ '' if admins|length == 1 else 's' }} can manage this ministry workspace.</p>
+        </div>
+      </div>
+      <div class="admin-account-list">
+        {% for admin in admins %}
+          <article class="admin-account-row">
+            <div class="admin-avatar" aria-hidden="true">{{ admin.username[:1]|upper }}</div>
+            <div class="admin-account-details">
+              <strong>{{ admin.username }}</strong>
+              <small>
+                {% if admin.id == current_admin_id %}Your account{% else %}Administrator{% endif %}
+                {% if admin.created_at %} · Added {{ admin.created_at }}{% endif %}
+              </small>
+            </div>
+            {% if admin.id == current_admin_id %}
+              <span class="admin-current-badge">You</span>
+            {% else %}
+              <form method="post" action="{{ url_for('delete_admin', admin_id=admin.id) }}" onsubmit="return confirm('Remove this administrator account? They will lose access on their next request.');">
+                <input type="hidden" name="admin_form_token" value="{{ admin_form_token() }}">
+                <button class="button button-danger admin-remove-button" type="submit">Remove</button>
+              </form>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+      <p class="admin-security-note"><span aria-hidden="true">🔒</span> Passwords are securely stored and cannot be viewed here. Removing an account prevents its next sign-in and ends its access on its next request.</p>
+    </section>
+
+    <section class="panel form-card admin-create-panel">
+      <div class="form-section-heading">
+        <span class="step-number" aria-hidden="true">＋</span>
+        <div><h2>Add an administrator</h2><p>Create a separate username and password for a leader.</p></div>
+      </div>
+      <form class="form-grid admin-create-form" method="post" action="{{ url_for('admins') }}">
+        <input type="hidden" name="admin_form_token" value="{{ admin_form_token() }}">
+        <label>
+          <span>Username</span>
+          <input type="text" name="username" minlength="3" maxlength="64" autocomplete="off" required>
+        </label>
+        <label>
+          <span>Password</span>
+          <input type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          <small class="field-hint">Use at least 8 characters. Share it privately.</small>
+        </label>
+        <label>
+          <span>Confirm password</span>
+          <input type="password" name="confirm_password" minlength="8" maxlength="128" autocomplete="new-password" required>
+        </label>
+        <div class="admin-create-actions">
+          <button class="button button-primary" type="submit">Create admin account</button>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

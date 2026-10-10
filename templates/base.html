@@ -11,7 +11,7 @@
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='brand/app-icon-192.png') }}">
     <title>{% block title %}{{ church_name }} · {{ headquarters }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}?v=6">
+    <link rel="stylesheet" href="{{ url_for('static', filename='brand.css') }}?v=7">
   </head>
   <body>
     <div class="app-shell">
@@ -36,6 +36,9 @@
           <a class="{{ 'active' if active_page == 'attendance' else '' }}" href="{{ url_for('attendance') }}">
             <span class="nav-icon">✓</span> Attendance
           </a>
+          <a class="{{ 'active' if active_page == 'admins' else '' }}" href="{{ url_for('admins') }}">
+            <span class="nav-icon">♙</span> Admins
+          </a>
         </nav>
         <div class="sidebar-bottom">
           <div class="support-card">
@@ -57,6 +60,7 @@
             <img class="brand-mark" src="{{ url_for('static', filename='brand/official-ministry-seal-original.jpeg') }}" alt="">
             <span><strong>SEED OF CHRIST</strong><small>{{ church_slogan }}</small></span>
           </div>
+          <a class="mobile-admin-link {{ 'active' if active_page == 'admins' else '' }}" href="{{ url_for('admins') }}">Admins</a>
           <div class="topbar-spacer"></div>
           <div id="network-status" class="network-status"><span class="network-dot"></span> Online</div>
           <div class="topbar-date"><span class="topbar-dot"></span> {{ today_label if today_label else 'Ministry workspace' }}</div>
