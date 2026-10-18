@@ -186,22 +186,99 @@
   }
 
   async function sendFormOrQueue(form, queueFunction) {
-    if (!navigator.onLine) {
-      await queueFunction(form);
-      setNetworkState(false);
-      return;
+    var submitButton = form.querySelector('button[type="submit"]');
+    var saveConfirmed = false;
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.setAttribute("aria-busy", "true");
     }
     try {
-      var response = await fetch(form.action || window.location.href, {
-        method: "POST",
-        body: new FormData(form),
-        credentials: "same-origin"
-      });
-      if (!response.ok) throw new Error("The server could not save this record.");
-      window.location.href = response.url || window.location.href;
-    } catch (_) {
-      await queueFunction(form);
-      setNetworkState(false, "Connection lost — saved locally");
+      if (!navigator.onLine) {
+        await queueFunction(form);
+        setNetworkState(false);
+        return;
+      }
+
+      var response;
+      try {
+        response = await fetch(form.action || window.location.href, {
+          method: "POST",
+          body: new FormData(form),
+          credentials: "same-origin",
+          headers: {"X-Requested-With": "XMLHttpRequest"}
+        });
+      } catch (_) {
+        await queueFunction(form);
+        setNetworkState(false, "Connection lost — saved locally");
+        return;
+      }
+
+      var responseUrl = new URL(response.url || window.location.href, window.location.href);
+      if (response.redirected && (responseUrl.pathname === "/login" || responseUrl.pathname === "/setup")) {
+        showMessage(
+          "Your admin sign-in has expired. Your entries are still on this form. Sign in, then return and submit again.",
+          "error",
+          form
+        );
+        return;
+      }
+
+      var contentType = response.headers.get("Content-Type") || "";
+      if (contentType.indexOf("application/json") !== -1) {
+        var result = await response.json();
+        if (!response.ok || !result.ok) {
+          showMessage(
+            result.error || "The server could not save this member. Your entries are still on this form.",
+            "error",
+            form
+          );
+          return;
+        }
+        showMessage(result.message || "Member saved successfully.", "success", form);
+        saveConfirmed = true;
+        window.setTimeout(function () {
+          window.location.assign(result.redirect_url || window.location.href);
+        }, 1000);
+        return;
+      }
+
+      var responseHtml = await response.text();
+      var responseDocument = new DOMParser().parseFromString(responseHtml, "text/html");
+      var serverMessage = responseDocument.querySelector(".flash");
+      if (!response.ok) {
+        showMessage(
+          serverMessage
+            ? serverMessage.textContent.replace(/^[✓!]\s*/, "").trim()
+            : "The server could not confirm the save (HTTP " + response.status + "). Your entries are still on this form.",
+          "error",
+          form
+        );
+        return;
+      }
+      if (response.redirected && responseUrl.pathname !== new URL(window.location.href).pathname) {
+        window.location.assign(responseUrl.href);
+        return;
+      }
+      if (serverMessage) {
+        showMessage(
+          serverMessage.textContent.replace(/^[✓!]\s*/, "").trim(),
+          serverMessage.classList.contains("error") ? "error" : "success",
+          form
+        );
+      } else {
+        showMessage(
+          "The server returned the form without confirming the member was saved. Your entries are still here; check the member list before retrying.",
+          "error",
+          form
+        );
+      }
+    } catch (error) {
+      showMessage(error.message || "The member could not be saved.", "error", form);
+    } finally {
+      if (submitButton && !saveConfirmed) {
+        submitButton.disabled = false;
+        submitButton.removeAttribute("aria-busy");
+      }
     }
   }
 

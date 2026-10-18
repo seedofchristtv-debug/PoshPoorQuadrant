@@ -464,37 +464,74 @@ def members():
 @app.route("/members/add", methods=["GET", "POST"])
 def add_member():
     if request.method == "POST":
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+        def form_error(message, status):
+            if is_ajax:
+                return jsonify({"ok": False, "error": message}), status
+            flash(message, "error")
+            return (
+                render_template(
+                    "member_form.html", active_page="members", member=None
+                ),
+                status,
+            )
+
         first_name = request.form.get("first_name", "").strip()
         last_name = request.form.get("last_name", "").strip()
         if not first_name or not last_name:
-            flash("First name and last name are required.", "error")
-            return render_template("member_form.html", active_page="members", member=None)
+            return form_error("First name and last name are required.", 400)
         try:
             photo_filename = save_photo(request.files.get("photo"))
         except ValueError as error:
-            flash(str(error), "error")
-            return render_template("member_form.html", active_page="members", member=None)
+            return form_error(str(error), 400)
+        except OSError:
+            app.logger.exception("Could not save the new member photo.")
+            return form_error(
+                "The photo could not be saved. Please try again without the photo or choose another image.",
+                500,
+            )
+
         db = get_db()
-        db.execute(
-            """
-            INSERT INTO members
-            (first_name, last_name, phone, email, address, group_name, join_date, birth_date, photo_filename)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                first_name,
-                last_name,
-                request.form.get("phone", "").strip(),
-                request.form.get("email", "").strip(),
-                request.form.get("address", "").strip(),
-                request.form.get("group_name", "").strip(),
-                request.form.get("join_date", "").strip(),
-                request.form.get("birth_date", "").strip(),
-                photo_filename,
-            ),
-        )
-        db.commit()
-        flash(f"{first_name} {last_name} has been added to the church family.", "success")
+        try:
+            db.execute(
+                """
+                INSERT INTO members
+                (first_name, last_name, phone, email, address, group_name, join_date, birth_date, photo_filename)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    first_name,
+                    last_name,
+                    request.form.get("phone", "").strip() or None,
+                    request.form.get("email", "").strip() or None,
+                    request.form.get("address", "").strip() or None,
+                    request.form.get("group_name", "").strip() or None,
+                    request.form.get("join_date", "").strip() or None,
+                    request.form.get("birth_date", "").strip() or None,
+                    photo_filename,
+                ),
+            )
+            db.commit()
+        except sqlite3.Error:
+            db.rollback()
+            if photo_filename:
+                try:
+                    (UPLOAD_DIR / photo_filename).unlink(missing_ok=True)
+                except OSError:
+                    app.logger.exception("Could not remove an unlinked member photo.")
+            app.logger.exception("Could not add a member to the database.")
+            return form_error(
+                "The member could not be saved to the database. Your entries are still on this form; please try again.",
+                500,
+            )
+
+        message = f"{first_name} {last_name} has been added to the church family."
+        flash(message, "success")
+        if is_ajax:
+            return jsonify(
+                {"ok": True, "message": message, "redirect_url": url_for("members")}
+            )
         return redirect(url_for("members"))
     return render_template("member_form.html", active_page="members", member=None)
 

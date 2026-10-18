@@ -7,19 +7,19 @@
     <section class="panel form-card">
       <div class="form-section-heading"><span class="step-number">01</span><div><h2>Personal information</h2><p>Basic details to help your team know each member.</p></div></div>
       <div class="form-grid two-col">
-        <label><span>First name <b>*</b></span><input required name="first_name" value="{{ member.first_name if member else '' }}" placeholder="e.g. Grace"></label>
-        <label><span>Last name <b>*</b></span><input required name="last_name" value="{{ member.last_name if member else '' }}" placeholder="e.g. Mensah"></label>
-        <label><span>Phone number</span><input type="tel" name="phone" value="{{ member.phone if member else '' }}" placeholder="+233 24 000 0000"></label>
-        <label><span>Email address</span><input type="email" name="email" value="{{ member.email if member else '' }}" placeholder="name@example.com"></label>
-        <label class="full-span"><span>Home address</span><input name="address" value="{{ member.address if member else '' }}" placeholder="Street, city, region"></label>
+        <label><span>First name <b>*</b></span><input required name="first_name" value="{{ request.form.get('first_name', member.first_name if member else '') }}" placeholder="e.g. Grace"></label>
+        <label><span>Last name <b>*</b></span><input required name="last_name" value="{{ request.form.get('last_name', member.last_name if member else '') }}" placeholder="e.g. Mensah"></label>
+        <label><span>Phone number</span><input type="tel" name="phone" value="{{ request.form.get('phone', member.phone if member else '') }}" placeholder="+233 24 000 0000"></label>
+        <label><span>Email address</span><input type="email" name="email" value="{{ request.form.get('email', member.email if member else '') }}" placeholder="name@example.com"></label>
+        <label class="full-span"><span>Home address</span><input name="address" value="{{ request.form.get('address', member.address if member else '') }}" placeholder="Street, city, region"></label>
       </div>
     </section>
     <section class="panel form-card">
       <div class="form-section-heading"><span class="step-number">02</span><div><h2>Church connection</h2><p>Keep track of how this person is connected to the ministry.</p></div></div>
       <div class="form-grid two-col">
-        <label><span>Ministry group</span><input name="group_name" value="{{ member.group_name if member else '' }}" placeholder="e.g. Youth, Choir, Ushers"></label>
-        <label><span>Join date</span><input type="date" name="join_date" value="{{ member.join_date if member else '' }}"></label>
-        <label><span>Date of birth</span><input type="date" name="birth_date" value="{{ member.birth_date if member else '' }}"></label>
+        <label><span>Ministry group</span><input name="group_name" value="{{ request.form.get('group_name', member.group_name if member else '') }}" placeholder="e.g. Youth, Choir, Ushers"></label>
+        <label><span>Join date</span><input type="date" name="join_date" value="{{ request.form.get('join_date', member.join_date if member else '') }}"></label>
+        <label><span>Date of birth</span><input type="date" name="birth_date" value="{{ request.form.get('birth_date', member.birth_date if member else '') }}"></label>
       </div>
     </section>
     <section class="panel form-card">
@@ -33,7 +33,7 @@
     </section>
     <div class="form-actions"><a class="button button-ghost" href="{{ url_for('member_detail', member_id=member.id) if member else url_for('members') }}">Cancel</a><button class="button button-primary" type="submit">{{ 'Save changes' if member else 'Add member' }} <span>→</span></button></div>
   </form>
-  <div class="offline-form-note" data-offline-message aria-live="polite"></div>
+  <div class="offline-form-note" data-offline-message role="status" aria-live="polite"></div>
   <script>
     (function () {
       var input = document.getElementById("photo-input");
