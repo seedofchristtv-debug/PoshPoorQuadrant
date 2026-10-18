@@ -1,1 +1,2 @@
 - [Ministry branding](ministry-branding.md) — keep the user's slogan and the intended placement of each supplied ministry image consistent.
+- [Ministry offline use](offline-first.md) — core field workflows must work without a network and sync when connectivity returns.
