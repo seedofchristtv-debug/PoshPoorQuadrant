@@ -32,10 +32,6 @@ localPort = 5000
 externalPort = 80
 
 [deployment]
-deploymentTarget = "cloudrun"
-
-[deployment.run]
-args = ["sh", "-c", "/nix/store/qzc04a3npl70cyyy6flnnrb2ig3kayxm-python3-3.13.11/bin/python3 $file"]
-
-[deployment.run.env]
-file = "main.py"
+deploymentTarget = "autoscale"
+run = ["sh", "-c", "uv run gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 120 app:app"]
+build = ["uv", "sync", "--frozen", "--no-dev"]

@@ -237,13 +237,17 @@ def inject_today_label():
 def protect_admin_pages():
     if request.endpoint in PUBLIC_ENDPOINTS:
         return None
-    if not admin_exists():
-        return redirect(url_for("setup"))
     admin_id = session.get("admin_id")
     if admin_id and not get_db().execute(
         "SELECT 1 FROM admins WHERE id = ?", (admin_id,)
     ).fetchone():
         session.clear()
+    # Keep the root URL healthy for publishing probes and render only the
+    # public sign-in/setup screen when no administrator is authenticated.
+    if request.endpoint == "dashboard" and "admin_id" not in session:
+        return None
+    if not admin_exists():
+        return redirect(url_for("setup"))
     if "admin_id" not in session:
         if request.path.startswith("/api/"):
             return jsonify({"ok": False, "error": "Sign in required to sync offline records."}), 401
@@ -379,6 +383,15 @@ def delete_admin(admin_id):
 
 @app.route("/")
 def dashboard():
+    if "admin_id" not in session:
+        if not admin_exists():
+            return render_template("setup.html", active_page="setup")
+        return render_template(
+            "login.html",
+            active_page="login",
+            next_path=url_for("dashboard"),
+        )
+
     db = get_db()
     today = date.today().isoformat()
     service_date = most_recent_sunday()
